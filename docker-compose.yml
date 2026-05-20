@@ -1,0 +1,62 @@
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: raptor_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ayberk
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: raptor_ledger
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - raptor_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: raptor_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://ayberk:password123@postgres:5432/raptor_ledger
+      - ENV=development
+    depends_on:
+      - postgres
+    networks:
+      - raptor_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: raptor_frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000/api
+    depends_on:
+      - backend
+    networks:
+      - raptor_network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  raptor_network:
+    driver: bridge
