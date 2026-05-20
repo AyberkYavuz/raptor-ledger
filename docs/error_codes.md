@@ -1,7 +1,3 @@
-
-```markdown
-# error_codes.md
-
 | Error Code Namespace | System Exception Intent | Target HTTP Status |
 | :--- | :--- | :--- |
 | `INVALID_REQUEST` | Incoming telemetry parsing payload breaks structural schemas. | 400 Bad Request |
