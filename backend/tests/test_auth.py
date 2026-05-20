@@ -13,6 +13,7 @@ from backend.core.exceptions import HTTPExceptionWithCode
 # Local micro test isolation tracking matrix engine
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 
+
 @pytest.mark.unit
 def test_cryptographic_password_hashing_boundary():
     """Confirms irreversible passphrases salt and resolve match criteria correctly."""
@@ -23,6 +24,7 @@ def test_cryptographic_password_hashing_boundary():
     assert verify_password(secret, hashed) is True
     assert verify_password("wrong_phrase", hashed) is False
 
+
 @pytest.mark.unit
 def test_jwt_token_minting_and_claim_extraction():
     """Validates serialized token claims decode precisely across operational matrices."""
@@ -32,6 +34,7 @@ def test_jwt_token_minting_and_claim_extraction():
     decoded = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
     assert decoded["sub"] == "ayberk@raptor.ai"
     assert "exp" in decoded
+
 
 @pytest.mark.asyncio
 async def test_get_current_user_unauthorized_boundary_conditions():
