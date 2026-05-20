@@ -22,20 +22,20 @@ The system enforces production-grade guardrails, transactional data integrity, a
 To maintain engineering transparency and demonstrate advanced software planning, all system specifications and AI prompt lifecycles are version-controlled alongside the application source code.
 
 raptor-ledger/
-├── docs/                      # Technical specification & architecture blueprints
-│   ├── Ai Agent Trading Bot Software Architecture Document V1.pdf
-│   ├── PROJECT_CONVENTIONS.md # Coding rules, async invariants, logging standards
-│   ├── database_schema.md    # Unified entity relationship & index specifications
-│   └── error_codes.md        # Explicit domain failure exception map
-├── prompts/                   # Prompt engineering lifecycle tracking
-│   ├── README.md              # AI-Assisted Engineering methodology guidelines
-│   └── module_0_foundation.md # Executed context prompt for skeleton initialization
-├── backend/                   # Python application workspace
-│   ├── core/                  # Core telemetry, configuration, and exception engines
-│   ├── db/                    # Asynchronous session factory and connection pooler
-│   ├── models/                # Structural SQLAlchemy physical model definitions
-│   └── ...                    # Modular agents, tools, workflows, and API endpoints
-└── frontend/                  # React dashboard workspace
+├── docs/ # Technical specification & architecture blueprints
+│ ├── Ai Agent Trading Bot Software Architecture Document V1.pdf
+│ ├── PROJECT_CONVENTIONS.md # Coding rules, async invariants, logging standards
+│ ├── database_schema.md # Unified entity relationship & index specifications
+│ └── error_codes.md # Explicit domain failure exception map
+├── prompts/ # Prompt engineering lifecycle tracking
+│ ├── README.md # AI-Assisted Engineering methodology guidelines
+│ └── module_0_foundation.md # Executed context prompt for skeleton initialization
+├── backend/ # Python application workspace
+│ ├── core/ # Core telemetry, configuration, and exception engines
+│ ├── db/ # Asynchronous session factory and connection pooler
+│ ├── models/ # Structural SQLAlchemy physical model definitions
+│ └── ... # Modular agents, tools, workflows, and API endpoints
+└── frontend/ # React dashboard workspace
 
 ### Documentation Directory Index
 - **Coding Conventions & Guardrails**: Read [`docs/PROJECT_CONVENTIONS.md`](./docs/PROJECT_CONVENTIONS.md) to review the asynchronous constraints, structural logging setups, and test isolation principles.
