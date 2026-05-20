@@ -37,6 +37,7 @@ raptor-ledger/
 │   ├── models/                # Structural SQLAlchemy physical model definitions
 │   └── ...                    # Modular agents, tools, workflows, and API endpoints
 └── frontend/                  # React dashboard workspace
+```
 
 ### Documentation Directory Index
 - **Coding Conventions & Guardrails**: Read [`docs/PROJECT_CONVENTIONS.md`](./docs/PROJECT_CONVENTIONS.md) to review the asynchronous constraints, structural logging setups, and test isolation principles.
