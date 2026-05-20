@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# env files
+env/backend-local.env
 
 # IDEs and editors
 .idea/
