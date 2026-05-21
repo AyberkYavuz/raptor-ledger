@@ -1,39 +1,26 @@
+// frontend/src/services/api.ts
 import axios from 'axios';
 
+// --- VITE NATIVE ENVIRONMENT CONFIGURATION ---
+// Instead of process.env, we use import.meta.env matching modern bundling specs
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8000',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Outbound request interception boundary layer
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('raptor_token');
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
+// Automatically inject your JWT token into outbound request streams if it exists
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('raptor_token');
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-);
-
-// Inbound response boundary anomaly interceptors
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      console.warn('Unauthorized token access boundary crossed. Purging local storage parameters.');
-      localStorage.removeItem('raptor_token');
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
-    }
-    return Promise.reject(error);
-  }
-);
+  return config;
+}, (error) => {
+  return Promise.reject(error);
+});
 
 export default api;
