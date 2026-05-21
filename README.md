@@ -8,11 +8,12 @@ The system enforces production-grade guardrails, transactional data integrity, a
 
 ## 🚀 Core Tech Stack
 
-- **Backend API Layer**: Python 3.11+, FastAPI (fully asynchronous execution matrix)
+- **Backend API Layer**: Python 3.9+, FastAPI (fully asynchronous execution matrix)
 - **Agent Orchestration Framework**: LangGraph (state persistence via memory buffers and relational state adapters)
-- **Database Layer**: PostgreSQL (PostgresApp engine, SQLAlchemy 2.0 Async engine with `asyncpg` dialect driver context)
+- **Database Layer**: PostgreSQL (SQLAlchemy 2.0 Async engine with `asyncpg` dialect driver context)
+- **Security & Cryptography**: Native `bcrypt==4.0.1` hashing backend & asymmetric JWT claims token minting
 - **Structured Telemetry Pipeline**: `structlog` (native JSON serialization streaming to stdout)
-- **Frontend Presentation Layer**: React, TailwindCSS, TypeScript
+- **Frontend Presentation Layer**: React 18+, Vite, TypeScript, Tailwind CSS v4 (Sleek, Dark-Themed Command Console)
 - **Environment & Containment**: Multi-stage Docker & Docker-Compose
 
 ---
@@ -30,13 +31,28 @@ raptor-ledger/
 │   └── error_codes.md        # Explicit domain failure exception map
 ├── prompts/                   # Prompt engineering lifecycle tracking
 │   ├── README.md              # AI-Assisted Engineering methodology guidelines
-│   └── module_0_foundation.md # Executed context prompt for skeleton initialization
+│   ├── module_0_foundation.md # Skeleton initialization context prompt
+│   └── module_1_auth.md       # Executed authentication & frontend integration prompt
+├── env/                       # Environment configuration repository
+│   └── backend-local.env      # Local database strings and cryptographic secrets
 ├── backend/                   # Python application workspace
-│   ├── core/                  # Core telemetry, configuration, and exception engines
+│   ├── api/                   # FastAPI route definitions and controller layers
+│   ├── core/                  # Telemetry, configurations, and security dependencies
 │   ├── db/                    # Asynchronous session factory and connection pooler
 │   ├── models/                # Structural SQLAlchemy physical model definitions
-│   └── ...                    # Modular agents, tools, workflows, and API endpoints
-└── frontend/                  # React dashboard workspace
+│   ├── schemas/               # Pydantic input/output validation models
+│   ├── tests/                 # Pytest cryptographic boundary validation suites
+│   ├── main.py                # Main PyCharm-executable server entrypoint
+│   └── seed_user.py           # Database verification profile seeder
+└── frontend/                  # React Vite dashboard workspace
+    ├── public/                # Static asset storage repository (Icons, manifests)
+    ├── src/                   # React TypeScript core source application
+    │   ├── pages/             # Layout screens (Login.tsx)
+    │   ├── services/          # Axios Axios-instance network configurations (api.ts)
+    │   ├── index.css          # Tailwind CSS v4 global styling sheet
+    │   └── main.tsx           # Client entrypoint mounting application tree
+    ├── vite.config.ts         # Vite bundler and Tailwind post-processor setup
+    └── package.json           # Frontend dependency manifest
 ```
 
 ### Documentation Directory Index
@@ -50,15 +66,47 @@ raptor-ledger/
 ---
 
 ## 🛠️ Local Environment Fast-Start
+The platform is designed to run natively on macOS using PostgresApp and PyCharm for rapid iterative development before compiling into isolated containerized services.
 
-The platform is designed to run natively on macOS using **PostgresApp** and **PyCharm** for rapid iterative development before compiling into isolated containerized services.
+### 1. Initialize and Seed the Database Core
+Ensure your local PostgreSQL engine is running on port 5432 with a database matching your local connection string in env/backend-local.env.
 
-### 1. Initialize Database Core Specs
-Ensure your local PostgreSQL engine is running on port `5432` with a valid catalog matching your local connection string in `env/backend-local.env`. 
+Navigate into the backend repository, spin up your isolated virtual environment, and execute the physical metadata synchronization and seeding scripts:
 
-Navigate into the backend repository, spin up your isolated virtual environment, and execute the physical metadata synchronization script:
+Bash
+cd backend
+source .venv/bin/activate
 
+#### Synchronize database structures and models
+python init_db.py
 
-# Synchronize structures and test asynchronous database integrity
-python3 init_db.py
+####  Seed the default developer authentication account profile
+python seed_user.py
+
+### 2. Execute Automated Verification Tests
+Run the asynchronous test suites to verify password cryptography boundaries, JWT token claim extractions, and API exception handlers:
+
+```Bash
+pytest backend/tests/test_auth.py -v -s
+```
+
+### 3. Launch the Backend API (via PyCharm or Terminal)
+Run backend/main.py directly inside PyCharm to utilize the native debugger, or run it programmatically from your terminal:
+
+```Bash
+python main.py
+```
+
+The API engine will boot up under structlog supervision and begin listening on http://127.0.0.1:8000. You can verify its heartbeat state at /health.
+
+### 4. Launch the Frontend Command UI
+Open a secondary terminal window, install the compiled Node modules, and execute the Vite development compilation engine:
+
+```Bash
+cd frontend
+npm install
+npm run dev
+```
+
+The modern UI console will boot up on http://localhost:5173. Open the interface, enter your seeded credentials (ayberk@raptorledger.ai / securepassword123), and access the command cockpit.
 
