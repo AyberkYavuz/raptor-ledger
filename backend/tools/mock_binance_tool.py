@@ -17,6 +17,8 @@ from backend.core.error_codes import ErrorCode
 
 logger: BoundLogger = structlog.get_logger(__name__)
 
+logger.info("mock_binance_tool.py begins")
+
 
 class MockBinanceTool:
     """
