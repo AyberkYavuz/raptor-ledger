@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     USE_MOCK_BINANCE: bool = True
     USE_FAKE_LLM: bool = True
+    MOCK_SLIPPAGE_BPS: int = 5
 
     # Risk Guardrails
     MAX_DAILY_LOSS: float = 20.0
