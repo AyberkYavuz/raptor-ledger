@@ -1,5 +1,6 @@
 // frontend/src/pages/Dashboard.tsx
 import React, { useEffect, useState } from 'react';
+import api from '../services/api'; // Ensure this points correctly to your Axios instance wrapper
 // Ensure you target 'raptor_token' to perfectly align with your login pipeline payload
 const token = localStorage.getItem('raptor_token') || '';
 
@@ -69,11 +70,28 @@ export const Dashboard: React.FC = () => {
   };
 
   const sendEchoFrame = (e: React.FormEvent) => {
+
     e.preventDefault();
     if (socket && wsStatus === 'Connected' && inputFrame.trim()) {
       socket.send(inputFrame);
       setWsMessages((prev) => [...prev, `[OUTBOUND]: ${inputFrame}`]);
       setInputFrame('');
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      // 1. Inform the server boundary that the session is terminating
+      await api.post('/api/auth/logout');
+    } catch (err) {
+      // We log the trace, but proceed with client clearing so the operator isn't stuck
+      console.warn('Backend boundary session termination log skipped or unreachable:', err);
+    } finally {
+      // 2. Perform client layer cleanup safely
+      localStorage.removeItem('raptor_token');
+
+      // 3. Kick operator back to the entry gateway interface
+      window.location.href = '/login';
     }
   };
 
