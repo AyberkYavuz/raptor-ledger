@@ -37,8 +37,16 @@ export const Dashboard: React.FC = () => {
 
   // Initialize the authenticated real-time network handshake
   const handleTestWebSocket = () => {
+
     if (socket) {
-        socket.close();
+      // 1. Wipe out its event handlers so its delayed closure cannot call React state updates
+      socket.onopen = null;
+      socket.onmessage = null;
+      socket.onclose = null;
+      socket.onerror = null;
+
+      // 2. Forcefully close the physical connection pipe
+      socket.close();
     }
 
     // FIX: Fetch the token dynamically from localStorage directly when the action fires
