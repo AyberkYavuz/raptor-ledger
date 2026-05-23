@@ -8,12 +8,12 @@ The system enforces production-grade guardrails, transactional data integrity, a
 
 ## 🚀 Core Tech Stack
 
-- **Backend API Layer**: Python 3.9+, FastAPI (fully asynchronous execution matrix)
+- **Backend API Layer**: Python 3.9+, FastAPI (fully asynchronous execution matrix supporting persistent TCP WebSocket protocol upgrades).
 - **Agent Orchestration Framework**: LangGraph (state persistence via memory buffers and relational state adapters)
 - **Database Layer**: PostgreSQL (SQLAlchemy 2.0 Async engine with `asyncpg` dialect driver context)
 - **Security & Cryptography**: Native `bcrypt==4.0.1` hashing backend & asymmetric JWT claims token minting
 - **Structured Telemetry Pipeline**: `structlog` (native JSON serialization streaming to stdout)
-- **Frontend Presentation Layer**: React 18+, Vite, TypeScript, Tailwind CSS v4 (Sleek, Dark-Themed Command Console)
+- **Frontend Presentation Layer**: React 18+, Vite, TypeScript, Tailwind CSS v4 (Sleek, Dark-Themed Command Cockpit equipped with an asynchronous real-time WebSocket state telemetry feed).
 - **Environment & Containment**: Multi-stage Docker & Docker-Compose
 
 ---
@@ -33,10 +33,13 @@ raptor-ledger/
 │   ├── README.md              # AI-Assisted Engineering methodology guidelines
 │   ├── module_0_foundation.md # Skeleton initialization context prompt
 │   └── module_1_auth.md       # Executed authentication & frontend integration prompt
+│   └── module_3_health_monitoring.md # Health Monitoring Module prompt
 ├── env/                       # Environment configuration repository
 │   └── backend-local.env      # Local database strings and cryptographic secrets
 ├── backend/                   # Python application workspace
 │   ├── api/                   # FastAPI route definitions and controller layers
+│   │   ├── auth.py            # Session management and access controllers
+│   │   └── websocket.py       # Authenticated real-time telemetry pipe route
 │   ├── core/                  # Telemetry, configurations, and security dependencies
 │   ├── db/                    # Asynchronous session factory and connection pooler
 │   ├── models/                # Structural SQLAlchemy physical model definitions
