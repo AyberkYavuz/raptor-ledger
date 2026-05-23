@@ -8,8 +8,10 @@ import { Dashboard } from './pages/Dashboard';
 const ProtectedRoute = ({ children }: { children: React.JSX.Element }) => {
   const token = localStorage.getItem('raptor_token');
 
-  if (!token) {
-    // Session token context missing -> kick operator back to gateway interface
+  // High defensive validation check to ensure empty/corrupted contexts are dropped
+  if (!token || token === '""' || token === 'null' || token.trim() === '') {
+    // Clear out any corrupted state leftovers completely
+    localStorage.removeItem('raptor_token');
     return <Navigate to="/login" replace />;
   }
 
