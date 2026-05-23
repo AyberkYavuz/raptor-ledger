@@ -46,7 +46,7 @@ async def websocket_test_endpoint(
         while True:
             # Simple echoing system loop
             client_data = await websocket.receive_text()
-            logger.debug("Received text frame context", data=client_data)
+            logger.info("Received text frame context", data=client_data)
             await websocket.send_json({
                 "event": "echo",
                 "payload": client_data
