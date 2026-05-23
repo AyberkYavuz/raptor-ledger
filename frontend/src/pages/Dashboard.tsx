@@ -99,15 +99,26 @@ export const Dashboard: React.FC = () => {
     <div className="min-h-screen bg-[#090d16] text-slate-100 font-mono selection:bg-emerald-500 selection:text-black">
       {/* Top Console Navigation Banner */}
       <header className="border-b border-slate-800 bg-[#0c1322] px-6 py-4 flex items-center justify-between shadow-md">
-        <div className="flex items-center space-x-3">
-          <div className="h-3 w-3 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]" />
-          <h1 className="text-md font-bold tracking-wider text-slate-200">
-            RAPTOR_LEDGER // <span className="text-emerald-400">OPS_CONSOLE_V3</span>
-          </h1>
-        </div>
-        <div className="text-xs text-slate-500 hidden sm:block">
-          SYS_STATUS: <span className="text-emerald-500 font-bold">OPERATIONAL</span>
-        </div>
+          <div className="flex items-center space-x-3">
+            <div className="h-3 w-3 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]" />
+            <h1 className="text-md font-bold tracking-wider text-slate-200">
+              RAPTOR_LEDGER // <span className="text-emerald-400">OPS_CONSOLE_V3</span>
+            </h1>
+          </div>
+
+          <div className="flex items-center space-x-6">
+            <div className="text-xs text-slate-500 hidden sm:block">
+              SYS_STATUS: <span className="text-emerald-500 font-bold">OPERATIONAL</span>
+            </div>
+
+            {/* Explicit Session Disconnect Trigger */}
+            <button
+              onClick={handleLogout}
+              className="text-xs bg-slate-800/60 hover:bg-rose-950/40 text-slate-400 hover:text-rose-400 px-3 py-1.5 rounded border border-slate-700 hover:border-rose-900/50 transition-all duration-200 cursor-pointer uppercase tracking-wider font-semibold"
+            >
+              TERMINATE_SESSION
+            </button>
+          </div>
       </header>
 
       {/* Main Workspace Layout Grid */}
