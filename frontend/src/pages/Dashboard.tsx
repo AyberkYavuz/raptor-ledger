@@ -79,6 +79,25 @@ export const Dashboard: React.FC = () => {
     setSocket(wsInstance);
   };
 
+  // Inside your Dashboard component setup
+  const [inputMessage, setInputMessage] = useState('');
+
+  const handleTransmit = () => {
+    if (socket && socket.readyState === WebSocket.OPEN && inputMessage.trim() !== '') {
+      const payload = {
+        event: 'client_command',
+        payload: { message: inputMessage }
+      };
+
+      // Send it down the pipe!
+      socket.send(JSON.stringify(payload));
+
+      // Local log to show what we sent outbound
+      setWsMessages((prev) => [...prev, `[OUTBOUND - COMMAND]: ${inputMessage}`]);
+      setInputMessage(''); // Clear input
+    }
+  };
+
   const sendEchoFrame = (e: React.FormEvent) => {
 
     e.preventDefault();
