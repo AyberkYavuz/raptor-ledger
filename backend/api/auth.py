@@ -45,6 +45,7 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
 @router.post("/logout", response_model=StandardResponse[None])
 async def logout():
     """Stateless logout implementation boundary interface context tracking."""
+    logger.info("logout function call!")
     return StandardResponse(
         success=True,
         message="Session terminated successfully on server boundaries. Client layer clear required.",
