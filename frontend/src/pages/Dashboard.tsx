@@ -1,4 +1,7 @@
+// frontend/src/pages/Dashboard.tsx
 import React, { useEffect, useState } from 'react';
+// Ensure you target 'raptor_token' to perfectly align with your login pipeline payload
+const token = localStorage.getItem('raptor_token') || '';
 
 interface HealthData {
   backend: string;
