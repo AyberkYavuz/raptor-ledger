@@ -38,32 +38,42 @@ export const Dashboard: React.FC = () => {
   // Initialize the authenticated real-time network handshake
   const handleTestWebSocket = () => {
     if (socket) {
-      socket.close();
+        socket.close();
     }
 
-    const wsUrl = `ws://localhost:8000/ws/test?token=${encodeURIComponent(token)}`;
+    // FIX: Fetch the token dynamically from localStorage directly when the action fires
+    const currentToken = localStorage.getItem('raptor_token') || '';
+
+    if (!currentToken || currentToken.trim() === '') {
+        setWsMessages((prev) => [...prev, '[SYSTEM ERROR]: Cannot transmit. Session token missing from storage matrix.']);
+        setWsStatus('Error');
+        return;
+    }
+
+    // Inject the fresh token directly into the URL query parameters
+    const wsUrl = `ws://localhost:8000/ws/test?token=${encodeURIComponent(currentToken)}`;
     const wsInstance = new WebSocket(wsUrl);
 
     setWsStatus('Connecting');
 
     wsInstance.onopen = () => {
-      setWsStatus('Connected');
-      setWsMessages((prev) => [...prev, '[SYSTEM]: Handshake validated. Pipe active.']);
+        setWsStatus('Connected');
+        setWsMessages((prev) => [...prev, '[SYSTEM]: Handshake validated. Pipe active.']);
     };
 
     wsInstance.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      setWsMessages((prev) => [...prev, `[INBOUND - ${data.event.toUpperCase()}]: ${JSON.stringify(data.payload || data.details)}`]);
+        const data = JSON.parse(event.data);
+        setWsMessages((prev) => [...prev, `[INBOUND - ${data.event.toUpperCase()}]: ${JSON.stringify(data.payload || data.details)}`]);
     };
 
     wsInstance.onclose = (event) => {
-      setWsStatus('Disconnected');
-      setWsMessages((prev) => [...prev, `[SYSTEM]: Connection dropped. Code: ${event.code}. Reason: ${event.reason || 'None'}`]);
-      setSocket(null);
+        setWsStatus('Disconnected');
+        setWsMessages((prev) => [...prev, `[SYSTEM]: Connection dropped. Code: ${event.code}. Reason: ${event.reason || 'None'}`]);
+        setSocket(null);
     };
 
     wsInstance.onerror = () => {
-      setWsStatus('Error');
+        setWsStatus('Error');
     };
 
     setSocket(wsInstance);
