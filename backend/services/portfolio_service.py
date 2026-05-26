@@ -90,16 +90,32 @@ class PortfolioService:
 
     async def get_trade_history(
         self, db: AsyncSession, user_id: UUID,
-        symbol: Optional[str] = None, limit: int = 100
+        symbol: Optional[str] = None, limit: int = 100,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None
     ) -> List[TradeHistoryData]:
-        """Paginated extraction sequence for structured historical trade logs."""
-        logger.info("Querying relational database logs for historical trades", user_id=str(user_id), symbol=symbol)
+        """Paginated extraction sequence for structured historical trade logs with optional date range filters."""
+        logger.info(
+            "Querying relational database logs for historical trades",
+            user_id=str(user_id), symbol=symbol, start_date=start_date, end_date=end_date
+        )
 
+        # Base query scoped to the current user
         query = select(Trade).where(Trade.user_id == user_id)
+
+        # Apply symbol filter if present
         if symbol:
             query = query.where(Trade.symbol == symbol)
 
+        # Apply chronological boundary limits if provided
+        if start_date:
+            query = query.where(Trade.timestamp >= start_date)
+        if end_date:
+            query = query.where(Trade.timestamp <= end_date)
+
+        # Order by latest trades first and apply pagination limit
         query = query.order_by(desc(Trade.timestamp)).limit(limit)
+
         result = await db.execute(query)
         trades = result.scalars().all()
 
