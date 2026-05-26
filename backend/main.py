@@ -31,6 +31,7 @@ import uvicorn
 from backend.api.auth import router as auth_router
 from backend.api.websocket import router as ws_router
 from backend.api import portfolio, trades  # Import Module 4 routers
+from backend.api.trading_control import router as trading_router, scheduler  # Import Module 5 routers
 from backend.db.base import get_db
 from backend.schemas.auth import StandardResponse
 from backend.tools.mock_binance_tool import MockBinanceTool
@@ -60,6 +61,7 @@ app.include_router(auth_router)
 app.include_router(ws_router)
 app.include_router(portfolio.router)
 app.include_router(trades.router)
+app.include_router(trading_router)
 
 
 # --- REFACTORED COMPREHENSIVE DIAGNOSTIC HEALTH CHECK ---
@@ -107,6 +109,20 @@ async def health_check(db: AsyncSession = Depends(get_db)):
         data=health_status
     )
 
+
+# Startup event
+@app.on_event("startup")
+async def startup_event():
+    # Start the background scheduler (jobs will only run after /start)
+    await scheduler.start_scheduler()
+    logger.info("Trading scheduler initialized")
+
+
+# Shutdown event
+@app.on_event("shutdown")
+async def shutdown_event():
+    await scheduler.shutdown_scheduler()
+    logger.info("Trading scheduler shut down")
 
 # --- PYCHARM NATIVE RUN CONFIGURATION ENTRYPOINT ---
 if __name__ == "__main__":
