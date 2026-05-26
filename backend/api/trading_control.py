@@ -19,7 +19,7 @@ from backend.services.portfolio_service import PortfolioService
 logger = structlog.get_logger("raptor_ledger.api.trading_control")
 router = APIRouter(prefix="/api/trading", tags=["Trading Control"])
 
-logger.info("trading_control.py begins")
+logger.info("trading_control.py begins!")
 
 # Global scheduler instance
 scheduler = TradingScheduler()
@@ -112,7 +112,7 @@ async def start_trading(
             initial_budget=req.initial_budget,
             max_daily_loss=req.max_daily_loss,
             trading_mode=req.trading_mode,
-            agent_callback=None   # uses default placeholder
+            agent_callback=None
         )
         return TradingResponse(
             success=True,
@@ -160,8 +160,9 @@ async def switch_mode(
     )
 
 
-# ---------- Manual Position Close (contract required) ----------
-@router.delete("/open-positions/{symbol}", response_model=TradingResponse)
+# ---------- Manual Position Close – exact contract path ----------
+# Overrides router prefix to match DELETE /api/trades/open-positions/{symbol}
+@router.delete("/api/trades/open-positions/{symbol}", response_model=TradingResponse)
 async def close_position_manually(
     symbol: str = Path(..., description="Trading pair symbol, e.g., BTCUSDT"),
     current_user: User = Depends(get_current_user),
@@ -169,12 +170,12 @@ async def close_position_manually(
 ):
     """
     Manually close an open position (emergency override).
-    Implements DELETE /api/trading/open-positions/{symbol} per contract.
+    Bypasses the '/api/trading' prefix to fulfill the explicit contract:
+    DELETE /api/trades/open-positions/{symbol}
     """
     binance = MockBinanceTool()
     portfolio_svc = PortfolioService(binance)
 
-    # Find the open position
     open_positions = await portfolio_svc.get_open_positions(db, current_user.id)
     position = next((p for p in open_positions if p.symbol == symbol), None)
     if not position:
@@ -185,7 +186,6 @@ async def close_position_manually(
         )
 
     try:
-        # Execute market SELL for the full quantity
         executed = await binance.place_order(
             symbol=symbol,
             side="SELL",
