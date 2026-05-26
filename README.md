@@ -34,6 +34,7 @@ raptor-ledger/
 │   ├── module_0_foundation.md # Skeleton initialization context prompt
 │   └── module_1_auth.md       # Executed authentication & frontend integration prompt
 │   └── module_3_health_monitoring.md # Health Monitoring Module prompt
+│   └── module_4_portfolio_trade_history.md # Portfolio & Trade History  Module prompt
 ├── env/                       # Environment configuration repository
 │   └── backend-local.env      # Local database strings and cryptographic secrets
 ├── backend/                   # Python application workspace
@@ -46,6 +47,7 @@ raptor-ledger/
 │   ├── schemas/               # Pydantic input/output validation models
 │   ├── tests/                 # Pytest cryptographic boundary validation suites
 │   ├── main.py                # Main PyCharm-executable server entrypoint
+│   └── seed_module4.py        # Synchronize Module 4 tables and insert historical ledger metrics
 │   └── seed_user.py           # Database verification profile seeder
 └── frontend/                  # React Vite dashboard workspace
     ├── public/                # Static asset storage repository (Icons, manifests)
@@ -76,21 +78,40 @@ Ensure your local PostgreSQL engine is running on port 5432 with a database matc
 
 Navigate into the backend repository, spin up your isolated virtual environment, and execute the physical metadata synchronization and seeding scripts:
 
-Bash
+```Bash
 cd backend
 source .venv/bin/activate
+```
 
 #### Synchronize database structures and models
+
+```Bash
 python init_db.py
+```
 
 ####  Seed the default developer authentication account profile
+```Bash
 python seed_user.py
+```
 
-### 2. Execute Automated Verification Tests
-Run the asynchronous test suites to verify password cryptography boundaries, JWT token claim extractions, and API exception handlers:
+#### Synchronize Module 4 tables and insert historical ledger metrics
+```Bash
+python seed_module4.py
+```
+
+### 2. Execute Automated Tests
+Run the asynchronous test suites:
 
 ```Bash
 pytest backend/tests/test_auth.py -v -s
+```
+
+```Bash
+pytest backend/tests/test_mock_infrastructure.py -v -s
+```
+
+```Bash
+pytest backend/tests/test_portfolio_history.py -v -s
 ```
 
 ### 3. Launch the Backend API (via PyCharm or Terminal)
