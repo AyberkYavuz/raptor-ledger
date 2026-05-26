@@ -30,6 +30,7 @@ import uvicorn
 
 from backend.api.auth import router as auth_router
 from backend.api.websocket import router as ws_router
+from backend.api import portfolio, trades  # Import Module 4 routers
 from backend.db.base import get_db
 from backend.schemas.auth import StandardResponse
 from backend.tools.mock_binance_tool import MockBinanceTool
@@ -57,6 +58,8 @@ app.add_middleware(
 # --- REGISTER COMPONENT ROUTERS ---
 app.include_router(auth_router)
 app.include_router(ws_router)
+app.include_router(portfolio.router)
+app.include_router(trades.router)
 
 
 # --- REFACTORED COMPREHENSIVE DIAGNOSTIC HEALTH CHECK ---
