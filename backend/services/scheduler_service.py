@@ -31,17 +31,14 @@ class TradingScheduler:
         if self._scheduler is not None:
             return
         self._scheduler = AsyncIOScheduler()
-        # Default interval (seconds) – can be made configurable
         self.cycle_interval = 30
 
     async def start_scheduler(self) -> None:
-        """Start the APScheduler background worker (does NOT start trading)."""
         if not self._scheduler.running:
             self._scheduler.start()
             logger.info("Background scheduler started")
 
     async def shutdown_scheduler(self) -> None:
-        """Gracefully shutdown scheduler on app exit."""
         if self._scheduler and self._scheduler.running:
             self._scheduler.shutdown(wait=False)
             logger.info("Background scheduler shut down")
@@ -54,11 +51,6 @@ class TradingScheduler:
         trading_mode: str,
         agent_callback: Optional[Callable[[], Awaitable[None]]] = None
     ) -> None:
-        """
-        Activate trading workflow: store config, clear emergency flag,
-        add or replace the background job.
-        """
-        # Validate
         if not symbols:
             raise ValueError("Symbols list cannot be empty")
         if initial_budget <= 0:
@@ -68,10 +60,8 @@ class TradingScheduler:
         if trading_mode not in ("paper", "live"):
             raise ValueError("trading_mode must be 'paper' or 'live'")
 
-        # Reset emergency flag
         await trading_state.set_emergency_active(False)
 
-        # Store configuration
         config = {
             "symbols": symbols,
             "initial_budget": initial_budget,
@@ -81,19 +71,15 @@ class TradingScheduler:
         await trading_state.set_trading_config(config)
         await trading_state.set_trading_mode(trading_mode)
 
-        # Update risk limits
         await trading_state.set_risk_limits({
             "max_daily_loss": max_daily_loss,
             "max_position_size": settings.MAX_POSITION_SIZE_USD
         })
 
-        # Remove existing job if any
         await self._remove_job()
 
-        # Use provided callback or default placeholder
         callback = agent_callback or self._default_agent_cycle
 
-        # Add new job with wrapped exception handler
         self._scheduler.add_job(
             self._safe_execution_wrapper,
             trigger="interval",
@@ -112,23 +98,17 @@ class TradingScheduler:
         )
 
     async def stop_trading(self) -> None:
-        """Stop the scheduled job and set active flag to False."""
         await self._remove_job()
         await trading_state.set_trading_active(False)
         logger.info("Trading workflow stopped")
 
     async def emergency_stop(self) -> None:
-        """
-        Immediate halt: purge jobs, set emergency flag,
-        disable further trading.
-        """
         await self._remove_job()
         await trading_state.set_trading_active(False)
         await trading_state.set_emergency_active(True)
         logger.warning("EMERGENCY STOP ACTIVATED – all trading halted")
 
     async def update_risk_limits(self, max_daily_loss: float, max_position_size: float) -> None:
-        """Dynamically change risk parameters (no restart needed)."""
         if max_daily_loss <= 0 or max_position_size <= 0:
             raise ValueError("Risk limits must be > 0")
         await trading_state.set_risk_limits({
@@ -138,28 +118,26 @@ class TradingScheduler:
         logger.info("Risk limits updated", max_daily_loss=max_daily_loss, max_position_size=max_position_size)
 
     async def switch_mode(self, new_mode: str) -> None:
-        """Switch between paper and live trading while workflow is active."""
         if new_mode not in ("paper", "live"):
             raise ValueError("Mode must be 'paper' or 'live'")
         await trading_state.set_trading_mode(new_mode)
-        # Also update stored config
         config = await trading_state.get_state()
         config["trading_config"]["trading_mode"] = new_mode
         logger.info("Trading mode switched", new_mode=new_mode)
 
     async def _remove_job(self) -> None:
-        """Remove the background job if it exists."""
         try:
             self._scheduler.remove_job(self._job_id)
         except JobLookupError:
-            pass  # Job not present
+            pass
 
     async def _safe_execution_wrapper(self, callback: Callable[[], Awaitable[None]]) -> None:
         """
-        Wraps the agent callback with try/except to catch any exception,
-        log it, and prevent scheduler crash.
+        Wraps agent callback with:
+        - Pre-execution emergency check
+        - Structured exception logging (error_class + detail)
+        - Post-execution emergency flag check
         """
-        # Do not run if emergency active
         state = await trading_state.get_state()
         if state["emergency_active"]:
             logger.debug("Skipping trading cycle – emergency stop active")
@@ -173,40 +151,41 @@ class TradingScheduler:
             await callback()
             logger.debug("Trading cycle completed successfully")
         except Exception as e:
-            logger.exception(
+            # Structured error logging with error class and detail
+            logger.error(
                 "Agent cycle raised an exception – continuing scheduler",
-                error=str(e),
+                error_class=e.__class__.__name__,
+                detail=str(e),
                 exc_info=True
             )
 
+        # After callback, check if emergency was triggered during the cycle
+        post_state = await trading_state.get_state()
+        if post_state["emergency_active"]:
+            logger.warning("Emergency stop was activated during the last trading cycle")
+
     async def _default_agent_cycle(self) -> None:
-        """
-        Placeholder agent logic. Replace this with your real LangGraph workflow.
-        Uses existing MockBinanceTool and PortfolioService for demonstration.
-        """
+        """Placeholder agent cycle – logs portfolio metrics."""
         from backend.db.base import async_session_factory
-        from backend.models.models import User  # needed for user_id; we'll assume first user
+        from backend.models.models import User
+        from sqlalchemy import select
 
         logger.info("Running default agent cycle (placeholder)")
-        # Obtain a test user – in real scenario you'd pass user_id from the start call
         async with async_session_factory() as db:
-            from sqlalchemy import select
             result = await db.execute(select(User).limit(1))
             user = result.scalar_one_or_none()
             if not user:
                 logger.warning("No user found – cannot run trading cycle")
                 return
 
-            # Get current portfolio state
             binance = MockBinanceTool()
             portfolio_svc = PortfolioService(binance)
             portfolio = await portfolio_svc.get_current_portfolio(db, user.id)
+            state = await trading_state.get_state()
 
             logger.info(
                 "Default cycle metrics",
                 total_balance=portfolio.total_balance,
                 available_cash=portfolio.available_cash,
-                trading_mode=(await trading_state.get_state())["trading_mode"]
+                trading_mode=state["trading_mode"]
             )
-            # Here you would call your AI agent decision maker
-            # and execute trades via binance.place_order()

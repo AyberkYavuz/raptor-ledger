@@ -1,6 +1,6 @@
 # backend/api/trading_control.py
 from fastapi import APIRouter, Depends, HTTPException, Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
 from uuid import UUID
 
@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.base import get_db
 from backend.core.dependencies import get_current_user
+from backend.core.exceptions import raise_http_exception
 from backend.models.models import User
 from backend.services.scheduler_service import TradingScheduler
 from backend.core.state import trading_state
@@ -20,17 +21,56 @@ router = APIRouter(prefix="/api/trading", tags=["Trading Control"])
 
 logger.info("trading_control.py begins")
 
-# Global scheduler instance (singleton)
+# Global scheduler instance
 scheduler = TradingScheduler()
 
-# --- Request/Response Schemas (matching api_contracts.txt) ---
 
-
+# ---------- Request Schemas with Custom Validation ----------
 class StartTradingRequest(BaseModel):
-    symbols: List[str] = Field(..., min_items=1)
-    initial_budget: float = Field(..., gt=0)
-    max_daily_loss: float = Field(..., gt=0)
-    trading_mode: str = Field(..., pattern="^(paper|live)$")
+    symbols: List[str] = Field(..., min_length=1)
+    initial_budget: float
+    max_daily_loss: float
+    trading_mode: str
+
+    @field_validator("symbols")
+    def validate_symbols(cls, v):
+        if not v:
+            raise_http_exception(
+                status_code=400,
+                error_code="INVALID_TRADING_CONFIGURATION",
+                message="Validation error. symbols list cannot be empty."
+            )
+        return v
+
+    @field_validator("initial_budget")
+    def validate_initial_budget(cls, v):
+        if v <= 0:
+            raise_http_exception(
+                status_code=400,
+                error_code="INVALID_TRADING_CONFIGURATION",
+                message="Validation error. initial_budget must be greater than 0."
+            )
+        return v
+
+    @field_validator("max_daily_loss")
+    def validate_max_daily_loss(cls, v):
+        if v <= 0:
+            raise_http_exception(
+                status_code=400,
+                error_code="INVALID_TRADING_CONFIGURATION",
+                message="Validation error. max_daily_loss must be greater than 0."
+            )
+        return v
+
+    @field_validator("trading_mode")
+    def validate_trading_mode(cls, v):
+        if v not in ("paper", "live"):
+            raise_http_exception(
+                status_code=400,
+                error_code="INVALID_TRADING_CONFIGURATION",
+                message="Validation error. trading_mode must be 'paper' or 'live'."
+            )
+        return v
 
 
 class UpdateRiskLimitsRequest(BaseModel):
@@ -39,7 +79,17 @@ class UpdateRiskLimitsRequest(BaseModel):
 
 
 class SwitchModeRequest(BaseModel):
-    trading_mode: str = Field(..., pattern="^(paper|live)$")
+    trading_mode: str
+
+    @field_validator("trading_mode")
+    def validate_mode(cls, v):
+        if v not in ("paper", "live"):
+            raise_http_exception(
+                status_code=400,
+                error_code="INVALID_TRADING_CONFIGURATION",
+                message="Validation error. trading_mode must be 'paper' or 'live'."
+            )
+        return v
 
 
 class TradingResponse(BaseModel):
@@ -47,9 +97,8 @@ class TradingResponse(BaseModel):
     message: str
     data: Optional[dict] = None
 
-# --- Endpoints ---
 
-
+# ---------- Endpoints ----------
 @router.post("/start", response_model=TradingResponse)
 async def start_trading(
     req: StartTradingRequest,
@@ -58,14 +107,12 @@ async def start_trading(
 ):
     """Start the AI trading workflow (background scheduler)."""
     try:
-        # You can pass a custom agent callback that uses the user context
-        # Here we use the default placeholder; in production you'd inject a LangGraph agent
         await scheduler.start_trading(
             symbols=req.symbols,
             initial_budget=req.initial_budget,
             max_daily_loss=req.max_daily_loss,
             trading_mode=req.trading_mode,
-            agent_callback=None   # uses default _default_agent_cycle
+            agent_callback=None   # uses default placeholder
         )
         return TradingResponse(
             success=True,
@@ -73,30 +120,22 @@ async def start_trading(
             data={"workflow_status": "active"}
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise_http_exception(400, "INVALID_TRADING_CONFIGURATION", str(e))
     except Exception as e:
         logger.exception("Failed to start trading", error=str(e))
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise_http_exception(500, "INTERNAL_ERROR", "Internal server error")
 
 
 @router.post("/stop", response_model=TradingResponse)
 async def stop_trading(current_user: User = Depends(get_current_user)):
-    """Stop the trading workflow gracefully."""
     await scheduler.stop_trading()
-    return TradingResponse(
-        success=True,
-        message="Trading workflow stopped successfully."
-    )
+    return TradingResponse(success=True, message="Trading workflow stopped successfully.")
 
 
 @router.post("/emergency-stop", response_model=TradingResponse)
 async def emergency_stop(current_user: User = Depends(get_current_user)):
-    """Immediately kill all trading activity."""
     await scheduler.emergency_stop()
-    return TradingResponse(
-        success=True,
-        message="Emergency stop activated."
-    )
+    return TradingResponse(success=True, message="Emergency stop activated.")
 
 
 @router.put("/risk-limits", response_model=TradingResponse)
@@ -104,12 +143,8 @@ async def update_risk_limits(
     req: UpdateRiskLimitsRequest,
     current_user: User = Depends(get_current_user)
 ):
-    """Update runtime risk parameters."""
     await scheduler.update_risk_limits(req.max_daily_loss, req.max_position_size)
-    return TradingResponse(
-        success=True,
-        message="Risk limits updated successfully."
-    )
+    return TradingResponse(success=True, message="Risk limits updated successfully.")
 
 
 @router.post("/paper-live", response_model=TradingResponse)
@@ -117,7 +152,6 @@ async def switch_mode(
     req: SwitchModeRequest,
     current_user: User = Depends(get_current_user)
 ):
-    """Switch between paper and live trading."""
     await scheduler.switch_mode(req.trading_mode)
     return TradingResponse(
         success=True,
@@ -126,27 +160,32 @@ async def switch_mode(
     )
 
 
-@router.delete("/trades/open-positions/{symbol}", response_model=TradingResponse)
+# ---------- Manual Position Close (contract required) ----------
+@router.delete("/open-positions/{symbol}", response_model=TradingResponse)
 async def close_position_manually(
     symbol: str = Path(..., description="Trading pair symbol, e.g., BTCUSDT"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Manual position close (emergency override).
-    Uses the MockBinanceTool to simulate a market sell.
+    Manually close an open position (emergency override).
+    Implements DELETE /api/trading/open-positions/{symbol} per contract.
     """
     binance = MockBinanceTool()
     portfolio_svc = PortfolioService(binance)
 
-    # Get current open positions to find the quantity
+    # Find the open position
     open_positions = await portfolio_svc.get_open_positions(db, current_user.id)
     position = next((p for p in open_positions if p.symbol == symbol), None)
     if not position:
-        raise HTTPException(status_code=404, detail=f"No open position for {symbol}")
+        raise_http_exception(
+            status_code=404,
+            error_code="NO_OPEN_POSITION",
+            message=f"No open position found for symbol {symbol}."
+        )
 
     try:
-        # Execute market sell
+        # Execute market SELL for the full quantity
         executed = await binance.place_order(
             symbol=symbol,
             side="SELL",
@@ -154,8 +193,13 @@ async def close_position_manually(
             simulate_slippage=True
         )
         exit_price = float(executed["price"])
-        logger.info(f"Manually closed {symbol} at {exit_price}", user_id=str(current_user.id))
-
+        logger.info(
+            "Manual position closed",
+            symbol=symbol,
+            quantity=position.quantity,
+            exit_price=exit_price,
+            user_id=str(current_user.id)
+        )
         return TradingResponse(
             success=True,
             message="Position closed successfully.",
@@ -163,13 +207,12 @@ async def close_position_manually(
         )
     except Exception as e:
         logger.exception("Manual close failed", error=str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise_http_exception(500, "CLOSE_FAILED", str(e))
 
 
-# Add a status endpoint to query current trading state (optional but helpful)
+# ---------- Status endpoint (helper) ----------
 @router.get("/status", response_model=TradingResponse)
 async def get_trading_status(current_user: User = Depends(get_current_user)):
-    """Return current trading state (active, mode, risk limits)."""
     state = await trading_state.get_state()
     return TradingResponse(
         success=True,
