@@ -13,7 +13,7 @@ from backend.core.exceptions import raise_http_exception
 from backend.models.models import User
 from backend.services.scheduler_service import TradingScheduler
 from backend.core.state import trading_state
-from backend.tools.mock_binance_tool import MockBinanceTool
+from backend.tools.mock_binance_tool import get_mock_binance
 from backend.services.portfolio_service import PortfolioService
 
 logger = structlog.get_logger("raptor_ledger.api.trading_control")
@@ -23,6 +23,9 @@ logger.info("trading_control.py begins!")
 
 # Global scheduler instance
 scheduler = TradingScheduler()
+
+
+binance = get_mock_binance()
 
 
 # ---------- Request Schemas with Custom Validation ----------
@@ -173,7 +176,6 @@ async def close_position_manually(
     Bypasses the '/api/trading' prefix to fulfill the explicit contract:
     DELETE /api/trades/open-positions/{symbol}
     """
-    binance = MockBinanceTool()
     portfolio_svc = PortfolioService(binance)
 
     open_positions = await portfolio_svc.get_open_positions(db, current_user.id)
@@ -218,4 +220,21 @@ async def get_trading_status(current_user: User = Depends(get_current_user)):
         success=True,
         message="Current trading status",
         data=state
+    )
+
+
+# ---------- TEMPORARY DEBUG: Create a test position ----------
+@router.post("/debug/buy/{symbol}")
+async def debug_buy(
+    symbol: str,
+    quantity: float = 0.001,
+    current_user: User = Depends(get_current_user)
+):
+    """DEBUG ONLY: Force a market buy to create an open position for testing."""
+    price = await binance.get_market_price(symbol)
+    order = await binance.place_order(symbol, "BUY", quantity, simulate_slippage=True)
+    return TradingResponse(
+        success=True,
+        message="Test position created",
+        data={"symbol": symbol, "quantity": quantity, "price": float(order["price"])}
     )
