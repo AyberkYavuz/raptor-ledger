@@ -150,3 +150,19 @@ class PortfolioService:
                 balance=s.balance
             ) for s in snapshots
         ]
+
+    async def get_net_position(self, db: AsyncSession, user_id: UUID, symbol: str) -> float:
+        """Return net quantity (BUYs - SELLs) for a given symbol."""
+        stmt = select(Trade).where(
+            Trade.user_id == user_id,
+            Trade.symbol == symbol
+        )
+        result = await db.execute(stmt)
+        trades = result.scalars().all()
+        net = 0.0
+        for t in trades:
+            if t.action == "BUY":
+                net += t.quantity
+            elif t.action == "SELL":
+                net -= t.quantity
+        return net
