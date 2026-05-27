@@ -167,24 +167,26 @@ async def switch_mode(
 
 # ---------- Manual Position Close – exact contract path ----------
 # Overrides router prefix to match DELETE /api/trades/open-positions/{symbol}
-@router.delete("/api/trades/open-positions/{symbol}", response_model=TradingResponse)
+@router.delete("/open-positions/{symbol}", response_model=TradingResponse)
 async def close_position_manually(
     symbol: str = Path(...),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Close a position using database‑computed net quantity."""
-    portfolio_svc = PortfolioService(binance)
+    logger.info("Manual close called", symbol=symbol, user_id=str(current_user.id))
 
-    # 1. Compute net position from trades table
+    portfolio_svc = PortfolioService(binance)
     net_qty = await portfolio_svc.get_net_position(db, current_user.id, symbol)
+    logger.info("Calculated net quantity", symbol=symbol, net_qty=net_qty)
+
     if net_qty <= 0:
         raise_http_exception(404, "NO_OPEN_POSITION", f"No open position for {symbol} (net={net_qty})")
 
-    # 2. Get current market price
-    current_price = await binance.get_market_price(symbol)
+    base_asset = symbol.replace("USDT", "")
 
-    # 3. Execute market SELL
+    # Sync mock balance with database net position (ensures enough to sell)
+    await binance.set_balance(base_asset, net_qty)
+
     try:
         executed = await binance.place_order(
             symbol=symbol,
@@ -194,25 +196,20 @@ async def close_position_manually(
         )
         exit_price = float(executed["price"])
 
-        # 4. Record the SELL trade in the database
         new_trade = Trade(
             user_id=current_user.id,
             symbol=symbol,
             action="SELL",
             quantity=net_qty,
             price=exit_price,
-            profit_loss=0.0,  # optionally compute later
+            profit_loss=0.0,
             order_id=executed["orderId"],
             timestamp=datetime.utcnow()
         )
         db.add(new_trade)
         await db.commit()
 
-        logger.info(
-            "Manual position closed (DB recorded)",
-            symbol=symbol, quantity=net_qty, exit_price=exit_price,
-            user_id=str(current_user.id)
-        )
+        logger.info("Manual position closed", symbol=symbol, quantity=net_qty, exit_price=exit_price)
         return TradingResponse(
             success=True,
             message="Position closed successfully.",
@@ -235,18 +232,8 @@ async def get_trading_status(current_user: User = Depends(get_current_user)):
     )
 
 
-# ---------- TEMPORARY DEBUG: Create a test position ----------
-@router.post("/debug/buy/{symbol}")
-async def debug_buy(
-    symbol: str,
-    quantity: float = 0.001,
-    current_user: User = Depends(get_current_user)
-):
-    """DEBUG ONLY: Force a market buy to create an open position for testing."""
-    price = await binance.get_market_price(symbol)
-    order = await binance.place_order(symbol, "BUY", quantity, simulate_slippage=True)
-    return TradingResponse(
-        success=True,
-        message="Test position created",
-        data={"symbol": symbol, "quantity": quantity, "price": float(order["price"])}
-    )
+@router.get("/debug/net/{symbol}")
+async def debug_net(symbol: str, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    portfolio_svc = PortfolioService(binance)
+    net = await portfolio_svc.get_net_position(db, current_user.id, symbol)
+    return {"net": net}
