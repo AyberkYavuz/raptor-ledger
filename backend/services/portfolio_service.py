@@ -8,7 +8,7 @@ from sqlalchemy.future import select
 from sqlalchemy import desc
 
 from backend.models.models import Trade, PortfolioSnapshot
-from backend.tools.mock_binance_tool import MockBinanceTool
+
 from backend.schemas.portfolio import (
     PortfolioStatusData, OpenPositionSchema,
     PortfolioHistoryData, TradeHistoryData
@@ -20,7 +20,7 @@ logger.info("portfolio_service.py begins")
 
 
 class PortfolioService:
-    def __init__(self, binance_tool: MockBinanceTool):
+    def __init__(self, binance_tool):
         self.binance = binance_tool
 
     async def get_current_portfolio(self, db: AsyncSession, user_id: UUID) -> PortfolioStatusData:
