@@ -49,6 +49,12 @@ class MockBinanceTool:
                 return {asset: self._balances.get(asset, 0.0)}
             return self._balances.copy()
 
+    async def set_balance(self, asset: str, quantity: float) -> None:
+        """Force-set the balance of a specific asset (used for syncing with DB)."""
+        async with self._balance_lock:
+            self._balances[asset] = quantity
+        logger.info("Mock balance set", asset=asset, quantity=quantity)
+
     async def get_market_price(self, symbol: str) -> float:
         if self.simulate_timeout:
             raise Exception(ErrorCode.BINANCE_API_ERROR.value)
