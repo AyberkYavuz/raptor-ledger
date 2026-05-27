@@ -7,13 +7,15 @@ from apscheduler.jobstores.base import JobLookupError
 import structlog
 
 from backend.core.state import trading_state
-from backend.tools.mock_binance_tool import MockBinanceTool
+from backend.tools.mock_binance_tool import get_mock_binance
 from backend.services.portfolio_service import PortfolioService
 from backend.core.config import settings
 
 logger = structlog.get_logger("raptor_ledger.services.scheduler")
 
 logger.info("scheduler_service.py begins")
+
+binance = get_mock_binance()
 
 
 class TradingScheduler:
@@ -178,7 +180,6 @@ class TradingScheduler:
                 logger.warning("No user found – cannot run trading cycle")
                 return
 
-            binance = MockBinanceTool()
             portfolio_svc = PortfolioService(binance)
             portfolio = await portfolio_svc.get_current_portfolio(db, user.id)
             state = await trading_state.get_state()
