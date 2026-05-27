@@ -7,12 +7,12 @@ from backend.db.base import get_db
 from backend.schemas.auth import StandardResponse
 from backend.schemas.portfolio import PortfolioStatusData, PortfolioHistoryData
 from backend.services.portfolio_service import PortfolioService
-from backend.tools.mock_binance_tool import MockBinanceTool
-from backend.core.dependencies import get_current_user # Core auth check fence
+from backend.tools.mock_binance_tool import get_mock_binance
+from backend.core.dependencies import get_current_user  # Core auth check fence
 from backend.models.models import User
 
 router = APIRouter(prefix="/api/portfolio", tags=["Portfolio Tracking"])
-binance_tool = MockBinanceTool()
+binance_tool = get_mock_binance()
 portfolio_service = PortfolioService(binance_tool)
 
 
