@@ -34,11 +34,11 @@ from backend.api import portfolio, trades  # Import Module 4 routers
 from backend.api.trading_control import router as trading_router, scheduler  # Import Module 5 routers
 from backend.db.base import get_db
 from backend.schemas.auth import StandardResponse
-from backend.tools.mock_binance_tool import MockBinanceTool
+from backend.tools.mock_binance_tool import get_mock_binance
 from backend.tools.fake_llm import FakeLLM
 
 # Instantiate mock tools for service health verification
-mock_binance = MockBinanceTool()
+mock_binance = get_mock_binance()
 fake_llm = FakeLLM()
 
 app = FastAPI(
