@@ -31,6 +31,7 @@ class MockBinanceTool:
         self._base_prices: Dict[str, float] = {
             "BTCUSDT": 65000.0,
             "ETHUSDT": 3200.0,
+            "SOLUSDT": 180.0
         }
         self.simulate_timeout: bool = False
         self.simulate_invalid_response: bool = False
