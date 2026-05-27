@@ -3,14 +3,14 @@ Unit tests for Module 2: Mock Infrastructure (MockBinanceTool, FakeLLM, factory)
 """
 
 import pytest
-from backend.tools.mock_binance_tool import MockBinanceTool
+from backend.tools.mock_binance_tool import get_mock_binance
 from backend.tools.fake_llm import FakeLLM
 from backend.tools.factory import get_binance_tool, get_llm
 
 
 @pytest.mark.asyncio
 async def test_mock_binance_get_balance():
-    tool = MockBinanceTool()
+    tool = get_mock_binance()
     balance = await tool.get_balance()
     assert "USDT" in balance
     assert balance["USDT"] == 500.0
@@ -20,7 +20,7 @@ async def test_mock_binance_get_balance():
 
 @pytest.mark.asyncio
 async def test_mock_binance_get_market_price():
-    tool = MockBinanceTool()
+    tool = get_mock_binance()
     price = await tool.get_market_price("BTCUSDT")
     # Price should be around base 65000 with ±0.1% drift
     assert 64000 < price < 66000
@@ -28,7 +28,7 @@ async def test_mock_binance_get_market_price():
 
 @pytest.mark.asyncio
 async def test_mock_binance_place_buy_order():
-    tool = MockBinanceTool()
+    tool = get_mock_binance()
     initial_balance = await tool.get_balance()
     initial_btc = initial_balance["BTC"]
 
@@ -44,7 +44,7 @@ async def test_mock_binance_place_buy_order():
 
 @pytest.mark.asyncio
 async def test_mock_binance_insufficient_balance():
-    tool = MockBinanceTool()
+    tool = get_mock_binance()
     with pytest.raises(Exception) as exc_info:
         # Try to buy more BTC than USDT can afford
         await tool.place_order("BTCUSDT", "BUY", 100.0)
@@ -53,7 +53,7 @@ async def test_mock_binance_insufficient_balance():
 
 @pytest.mark.asyncio
 async def test_mock_binance_simulate_timeout():
-    tool = MockBinanceTool()
+    tool = get_mock_binance()
     tool.simulate_timeout = True
     with pytest.raises(Exception) as exc_info:
         await tool.get_balance()
@@ -98,8 +98,8 @@ async def test_fake_llm_timeout():
 
 @pytest.mark.asyncio
 async def test_factory_returns_mocks():
-    # Assuming USE_MOCK_BINANCE and USE_FAKE_LLM are True in env
     binance = get_binance_tool()
     llm = get_llm()
-    assert isinstance(binance, MockBinanceTool)
+    from backend.tools.mock_binance_tool import MockBinanceTool
+    assert isinstance(binance, MockBinanceTool)  # compare with class, not instance
     assert isinstance(llm, FakeLLM)
