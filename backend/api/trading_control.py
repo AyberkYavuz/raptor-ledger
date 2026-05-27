@@ -3,6 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException, Path
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
 from uuid import UUID
+from datetime import datetime
+from backend.models.models import Trade
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -167,39 +169,48 @@ async def switch_mode(
 # Overrides router prefix to match DELETE /api/trades/open-positions/{symbol}
 @router.delete("/api/trades/open-positions/{symbol}", response_model=TradingResponse)
 async def close_position_manually(
-    symbol: str = Path(..., description="Trading pair symbol, e.g., BTCUSDT"),
+    symbol: str = Path(...),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Manually close an open position (emergency override).
-    Bypasses the '/api/trading' prefix to fulfill the explicit contract:
-    DELETE /api/trades/open-positions/{symbol}
-    """
+    """Close a position using database‑computed net quantity."""
     portfolio_svc = PortfolioService(binance)
 
-    open_positions = await portfolio_svc.get_open_positions(db, current_user.id)
-    position = next((p for p in open_positions if p.symbol == symbol), None)
-    if not position:
-        raise_http_exception(
-            status_code=404,
-            error_code="NO_OPEN_POSITION",
-            message=f"No open position found for symbol {symbol}."
-        )
+    # 1. Compute net position from trades table
+    net_qty = await portfolio_svc.get_net_position(db, current_user.id, symbol)
+    if net_qty <= 0:
+        raise_http_exception(404, "NO_OPEN_POSITION", f"No open position for {symbol} (net={net_qty})")
 
+    # 2. Get current market price
+    current_price = await binance.get_market_price(symbol)
+
+    # 3. Execute market SELL
     try:
         executed = await binance.place_order(
             symbol=symbol,
             side="SELL",
-            quantity=position.quantity,
+            quantity=net_qty,
             simulate_slippage=True
         )
         exit_price = float(executed["price"])
-        logger.info(
-            "Manual position closed",
+
+        # 4. Record the SELL trade in the database
+        new_trade = Trade(
+            user_id=current_user.id,
             symbol=symbol,
-            quantity=position.quantity,
-            exit_price=exit_price,
+            action="SELL",
+            quantity=net_qty,
+            price=exit_price,
+            profit_loss=0.0,  # optionally compute later
+            order_id=executed["orderId"],
+            timestamp=datetime.utcnow()
+        )
+        db.add(new_trade)
+        await db.commit()
+
+        logger.info(
+            "Manual position closed (DB recorded)",
+            symbol=symbol, quantity=net_qty, exit_price=exit_price,
             user_id=str(current_user.id)
         )
         return TradingResponse(
@@ -208,6 +219,7 @@ async def close_position_manually(
             data={"symbol": symbol, "exit_price": exit_price}
         )
     except Exception as e:
+        await db.rollback()
         logger.exception("Manual close failed", error=str(e))
         raise_http_exception(500, "CLOSE_FAILED", str(e))
 
